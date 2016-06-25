@@ -1,2 +1,2 @@
 # type
-Speed typing.
+Speed typing. http://ethproductions.github.io/type
