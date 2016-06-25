@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+	<head>
+		<title>Typing</title>
+		<script>
+			function $(x){return document.getElementById(x);}
+			function tf(n){return (n >= 6e4? (n / 6e4 | 0) + ":" + (n % 6e4 < 1e4 ? "0" : "") : "") + (n % 6e4 / 1e3).toFixed(3);}
+			var update,
+				started = false,
+				finished = false,
+				disabled = false;
+			function start(string) {
+				var date = 0,
+					oldtext = "";
+				
+				// Resetting elements
+				$("target").innerHTML = string;
+				$("output").innerHTML = "";
+				$("output").style.color = "red";
+				$("time").innerHTML = "0.000";
+				$("time").style.color = "";
+				$("input").value = "";
+				
+				function update2(){
+					if(finished) return;
+					var input = $("input").value, time;
+					
+					// We detect if the text has been completely erased, in which case the time is reset.
+					if(input.length === 0 && oldtext.length > 0) {
+						started = false;
+						$("time").innerHTML = "Reset";
+					}
+					
+					// Now we detect whether the user has pasted something.
+					// We check if the length has increased by at least 4, because 3 or less can be caused by mashing the keyboard.
+					if(input.length >= oldtext.length + 4) {
+						$("output").innerHTML = input = "Pasting is not allowed.";
+						disabled = true;
+					} else {
+						$("output").innerHTML = input;
+					}
+					
+					// If the user has typed out the full string, finish the program.
+					if(input === string) {
+						finished = true;
+						$("output").style.color = "green";
+						$("time").style.color = "green";
+						$("time").innerHTML = tf(new Date - date);
+					}
+					oldtext = input;
+				}
+				update = function update(){
+					var input = $("input").value;
+					if(input.length === 0) started = true, date = new Date, tick();
+					!finished && !disabled && setTimeout(update2, 10);
+				}
+				function tick(){
+					if(!started || finished) return;
+					$("time").innerHTML = tf(new Date - date);
+					setTimeout(tick, 43);
+				}
+			}
+		</script>
+	</head>
+	<body>
+		<p id="target" style="font-family: monospace; font-size: 28px;"></p>
+		<p id="output" style="font-family: monospace; font-size: 28px; height: 1em;"></p>
+		<p id="time" style="font-family: monospace; font-size: 28px;"></p>
+		<textarea id="input" style="opacity: 0; position: absolute; top: 0; left: 0; bottom: 0; width:99%;" onkeydown="update()" autofocus></textarea>
+		<script>
+			start("Speed typing is fun!");
+		</script>
+	</body>
+</html>
