@@ -11,10 +11,25 @@
 			function html(x,y,z){$(x).innerHTML=z?$(x).innerHTML+y:y;}
 			function value(x,y){return y!==undefined?$(x).value=y:$(x).value;}
 			
+			// Runs whenever a key is pressed.
+			function keyDown(event){
+				if(event.which === 9 || event.keyCode === 9) {
+					// If the key pressed was Tab, toggle the pause menu.
+					event.preventDefault();
+					if(state === 1)
+						pause();
+					else if(state===4)
+						unpause();
+				} else {
+					// If the key pressed was not tab, run update() after a brief delay.
+					setTimeout(update, 10);
+				}
+			}
+			
 			// Formats a number of ms as M:SS.sss (or S.sss, if less than one minute).
 			function tf(n){return (n >= 6e4? (n / 6e4 | 0) + ":" + (n % 6e4 < 1e4 ? "0" : "") : "") + (n % 6e4 / 1e3).toFixed(3);}
 			
-			var update, // A function that runs anytime a key is pressed. See update() below.
+			var update, // A function that runs anytime a key is pressed (besides Tab). See update() below.
 				pause, // A function that pauses the game. See pause() below.
 				unpause, // A function that unpauses. See unpause() below.
 				interval, // The interval controlling updateCursor().
@@ -122,8 +137,6 @@
 						html("timer", "Reset");
 					}
 					
-					if(oldtext.length < input.length && input.slice(-1) === "\t");
-					
 					// Now we detect whether the user has pasted something.
 					// We check if the length has increased by at least 4, because 3 or less can be caused by mashing the keyboard.
 					if(input.length >= oldtext.length + 4) {
@@ -228,7 +241,7 @@
 				<span class="menu-item" id="mi-s"><kbd>s</kbd> select level</span>
 			</p>
 		</div>
-		<textarea id="input" onkeydown="(event.which||event.keyCode)===9?(event.preventDefault(),state===1?pause():state===4&&unpause()):setTimeout(update, 10);" autofocus></textarea>
+		<textarea id="input" onkeydown="keyDown(event);" autofocus></textarea>
 		
 		<script>
 			start(levels[level]);
