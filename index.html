@@ -2,6 +2,8 @@
 <html>
 	<head>
 		<title>Typing</title>
+		<link href='https://fonts.googleapis.com/css?family=Source+Code+Pro' rel='stylesheet' type='text/css'>
+		<link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
 		<script>
 			// Too lazy for jQuery :P
 			function $(x){return document.getElementById(x)||document.createElement("div");}
@@ -15,7 +17,18 @@
 				cursor = 0, // Keeps track of which state the cursor should be in (on/off).
 				started = false,  // Whether the time has started. If false, the timer will not run.
 				finished = false, // Whether the user successfully finished. If true, the timer will not run and the input will not update.
-				disabled = false; // Whether the user messed up badly (i.e. pasted something). If true, the input will not update.
+				disabled = false, // Whether the user messed up badly (i.e. pasted something). If true, the input will not update.
+				level = 0,
+				levels = [
+					"type",
+					"hello",
+					"typing",
+					"letters",
+					"keyboard",
+					"UPPERCASE",
+					"10 letters",
+					"nomoreideas"
+				];
 			
 			// Flashes the cursor. Runs every 10 ms, but changes state every 500.
 			function updateCursor(){
@@ -24,10 +37,11 @@
 				cursor++;
 			}
 			
-			// Ends the flashing of the cursor. PERMANENTLY.
-			function endCursor(){
+			// Ends the flashing of the cursor and brings up the menu.
+			function endGame(){
 				clearInterval(interval);
 				$("cursor").style.borderRight = "";
+				$("menu").style.display = "block";
 			}
 			
 			// Kicks off a new game.
@@ -42,15 +56,30 @@
 				$("timer").innerHTML = "0.000";
 				$("timer").style.color = "";
 				$("input").value = "";
+				$("menu").style.display = "none";
+				
+				started = false;
+				finished = false;
+				disabled = false;
 				
 				interval = setInterval(updateCursor, 10);
 				
 				// Run the instant after a key is pressed.
 				update = function update(){
-					// If the game has ended, we ignore any new input.
-					if(finished || disabled) return;
-					
 					var input = $("input").value, time;
+					console.log(input);
+					
+					// If the game has ended, we perform a menu item.
+					if(finished || disabled) {
+						if(oldtext.length < input.length) {
+							var newchar = input.slice(-1).toLowerCase();
+							if(newchar === "r")
+								start(levels[level]);
+							else if(newchar === "n")
+								start(levels[++level]);
+						}
+						return;
+					}
 					
 					// First we detect if a first character has been entered, in which case we start the timer.
 					if(oldtext.length === 0 && input.length > 0) started = true, date = new Date, tick();
@@ -61,13 +90,15 @@
 						$("timer").innerHTML = "Reset";
 					}
 					
+					if(oldtext.length < input.length && input.slice(-1) === "\t");
+					
 					// Now we detect whether the user has pasted something.
 					// We check if the length has increased by at least 4, because 3 or less can be caused by mashing the keyboard.
 					if(input.length >= oldtext.length + 4) {
 						// If text has been pasted, end the game and write "Pasting is not allowed."
 						disabled = true;
 						$("output").innerHTML = input = "Pasting is not allowed.";
-						endCursor();
+						endGame();
 					} else {
 						// Otherwise, update the output and reset the cursor.
 						$("output").innerHTML = input + curtext;
@@ -77,10 +108,20 @@
 					// If the user has typed out the full string, finish the program.
 					if(input === string) {
 						finished = true;
-						endCursor();
+						endGame();
 						$("output").style.color = "green";
 						$("timer").style.color = "green";
-						$("timer").innerHTML = tf(new Date - date);
+						time = new Date - date;
+						$("timer").innerHTML = tf(time);
+						var oldtime = localStorage.getItem("level" + level);
+						if(!oldtime) {
+							localStorage.setItem("level" + level, time);
+						} else if(time < oldtime) {
+							localStorage.setItem("level" + level, time);
+							$("timer").innerHTML += " (old best: " + tf(oldtime) + ")";
+						} else {
+							$("timer").innerHTML += " (best: " + tf(oldtime) + ")";
+						}
 					}
 					oldtext = input;
 				}
@@ -94,8 +135,12 @@
 			}
 		</script>
 		<style>
+			* {
+				font-family: 'Open Sans', sans-serif;
+			}
 			pre {
 				font-size: 28px;
+				font-family: 'Source Code Pro', monospace;
 				min-height: 1em;
 				white-space:      pre-wrap;  /* css-3 */
 				white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
@@ -112,15 +157,41 @@
 				bottom: 0;
 				width: 99%;
 			}
+			
+			kbd {
+				font-family: 'Source Code Pro', monospace;
+				border-radius: 4px;
+				background-color: black;
+				color: white;
+				padding: 2px;
+				padding-left: 6px;
+				padding-right: 7px;
+			}
+			
+			#menu {
+				display: none;
+			}
+			
+			.menu-item {
+				margin-right: 12px;
+			}
 		</style>
 	</head>
 	<body>
 		<pre id="target"></pre>
 		<pre id="output"></pre>
 		<pre id="timer"></pre>
-		<textarea id="input" onkeydown="setTimeout(update, 10);" autofocus></textarea>
+		<div id="menu">
+			<p>
+				<span class="menu-item"><kbd>r</kbd> restart</span>
+				<span class="menu-item"><kbd>n</kbd> next level</span>
+				<span class="menu-item"><kbd>s</kbd> select level</span>
+			</p>
+		</div>
+		<textarea id="input" onkeydown="(event.which||event.keyCode)===9?(finished=true,endGame()):setTimeout(update, 10);" autofocus></textarea>
+		
 		<script>
-			start("Speed typing is fun!");
+			start(levels[level]);
 		</script>
 	</body>
 </html>
