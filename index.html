@@ -15,10 +15,8 @@
 				interval, // The interval controlling updateCursor().
 				curtext = '<span id="cursor" style="border-right: 2px solid black"></span>', // An element representing the cursor.
 				cursor = 0, // Keeps track of which state the cursor should be in (on/off).
-				started = false,  // Whether the time has started. If false, the timer will not run.
-				finished = false, // Whether the user successfully finished. If true, the timer will not run and the input will not update.
-				disabled = false, // Whether the user messed up badly (i.e. pasted something). If true, the input will not update.
-				level = 0,
+				state = 0, // 0 = not started, 1 = started, 2 = finished, 3 = disabled.
+				level = 0, // The current level the player is on. Represents an item in the below list.
 				levels = [
 					"type",
 					"hello",
@@ -58,9 +56,7 @@
 				$("input").value = "";
 				$("menu").style.display = "none";
 				
-				started = false;
-				finished = false;
-				disabled = false;
+				state = 0;
 				
 				interval = setInterval(updateCursor, 10);
 				
@@ -70,7 +66,7 @@
 					console.log(input);
 					
 					// If the game has ended, we perform a menu item.
-					if(finished || disabled) {
+					if(state === 2 || state === 3) {
 						if(oldtext.length < input.length) {
 							var newchar = input.slice(-1).toLowerCase();
 							if(newchar === "r")
@@ -82,11 +78,11 @@
 					}
 					
 					// First we detect if a first character has been entered, in which case we start the timer.
-					if(oldtext.length === 0 && input.length > 0) started = true, date = new Date, tick();
+					if(oldtext.length === 0 && input.length > 0) state = 1, date = new Date, tick();
 					
 					// Next we detect if the text has been completely erased, in which case the time is reset.
 					if(input.length === 0 && oldtext.length > 0) {
-						started = false;
+						state = 0;
 						$("timer").innerHTML = "Reset";
 					}
 					
@@ -96,7 +92,7 @@
 					// We check if the length has increased by at least 4, because 3 or less can be caused by mashing the keyboard.
 					if(input.length >= oldtext.length + 4) {
 						// If text has been pasted, end the game and write "Pasting is not allowed."
-						disabled = true;
+						state = 3;
 						$("output").innerHTML = input = "Pasting is not allowed.";
 						endGame();
 					} else {
@@ -107,7 +103,7 @@
 					
 					// If the user has typed out the full string, finish the program.
 					if(input === string) {
-						finished = true;
+						state = 2;
 						endGame();
 						$("output").style.color = "green";
 						$("timer").style.color = "green";
@@ -128,7 +124,7 @@
 				
 				// Updates the timer every 43 ms after the game starts.
 				function tick(){
-					if(!started || finished) return;
+					if(state === 0 || state === 2) return;
 					$("timer").innerHTML = tf(new Date - date);
 					setTimeout(tick, 43);
 				}
@@ -154,7 +150,7 @@
 				position: absolute;
 				top: 0;
 				left: 0;
-				bottom: 0;
+				height: 99%;
 				width: 99%;
 			}
 			
@@ -188,7 +184,7 @@
 				<span class="menu-item"><kbd>s</kbd> select level</span>
 			</p>
 		</div>
-		<textarea id="input" onkeydown="(event.which||event.keyCode)===9?(finished=true,endGame()):setTimeout(update, 10);" autofocus></textarea>
+		<textarea id="input" onkeydown="(event.which||event.keyCode)===9?(state=3,endGame(),event.preventDefault()):setTimeout(update, 10);" autofocus></textarea>
 		
 		<script>
 			start(levels[level]);
