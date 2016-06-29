@@ -7,15 +7,20 @@
 		<script>
 			// Too lazy for jQuery :P
 			function $(x){return document.getElementById(x)||document.createElement("div");}
+			function color(x,y){$(x).style.color=y;}
+			function html(x,y,z){$(x).innerHTML=z?$(x).innerHTML+y:y;}
+			function value(x,y){return y!==undefined?$(x).value=y:$(x).value;}
 			
 			// Formats a number of ms as M:SS.sss (or S.sss, if less than one minute).
 			function tf(n){return (n >= 6e4? (n / 6e4 | 0) + ":" + (n % 6e4 < 1e4 ? "0" : "") : "") + (n % 6e4 / 1e3).toFixed(3);}
 			
-			var update, // A function that's updated every time a new game is started. See update() below.
+			var update, // A function that runs anytime a key is pressed. See update() below.
+				pause, // A function that pauses the game. See pause() below.
+				unpause, // A function that unpauses. See unpause() below.
 				interval, // The interval controlling updateCursor().
 				curtext = '<span id="cursor" style="border-right: 2px solid black"></span>', // An element representing the cursor.
 				cursor = 0, // Keeps track of which state the cursor should be in (on/off).
-				state = 0, // 0 = not started, 1 = started, 2 = finished, 3 = disabled.
+				state = 0, // 0 = not started, 1 = started, 2 = finished, 3 = disabled, 4 = paused.
 				level = 0, // The current level the player is on. Represents an item in the below list.
 				levels = [
 					"type",
@@ -35,44 +40,75 @@
 				cursor++;
 			}
 			
-			// Ends the flashing of the cursor and brings up the menu.
-			function endGame(){
+			// Starts the flashing of the cursor.
+			function startCursor(){
+				interval = setInterval(updateCursor, 10);
+			}
+			
+			// Ends the flashing of the cursor.
+			function endCursor(){
 				clearInterval(interval);
 				$("cursor").style.borderRight = "";
+			}
+			
+			// Brings up the menu. If x is true, hides the "next level" option.
+			function showMenu(x){
 				$("menu").style.display = "block";
+				if(x) $("mi-n").style.display = "none";
+			}
+			
+			// Hides the menu.
+			function hideMenu(){
+				$("mi-n").style.display = "inline";
+				$("menu").style.display = "none";
 			}
 			
 			// Kicks off a new game.
 			function start(string) {
 				var date = 0,
+					time = 0,
 					oldtext = "";
 				
+				pause = function pause(){
+					time += new Date - date;
+					state = 4;
+					endCursor();
+					showMenu(true);
+				}
+			
+				unpause = function unpause(){
+					date = new Date;
+					state = 1;
+					startCursor;
+					hideMenu();
+					tick();
+				}
+				
 				// Resetting all important values of elements.
-				$("target").innerHTML = string;
-				$("output").innerHTML = curtext;
-				$("output").style.color = "red";
-				$("timer").innerHTML = "0.000";
-				$("timer").style.color = "";
-				$("input").value = "";
-				$("menu").style.display = "none";
+				html("target", string);
+				html("output", curtext);
+				color("output", "red");
+				html("timer", "0.000");
+				color("timer", "");
+				value("input", "");
+				hideMenu();
 				
 				state = 0;
 				
-				interval = setInterval(updateCursor, 10);
+				startCursor();
 				
 				// Run the instant after a key is pressed.
 				update = function update(){
-					var input = $("input").value, time;
-					console.log(input);
+					var input = value("input");
 					
 					// If the game has ended, we perform a menu item.
-					if(state === 2 || state === 3) {
+					if(state === 2 || state === 3 || state === 4) {
 						if(oldtext.length < input.length) {
 							var newchar = input.slice(-1).toLowerCase();
 							if(newchar === "r")
 								start(levels[level]);
-							else if(newchar === "n")
-								start(levels[++level]);
+							else if(newchar === "n" && state !== 4)
+								start(levels[++level] || levels[level = 0]);
 						}
 						return;
 					}
@@ -83,7 +119,7 @@
 					// Next we detect if the text has been completely erased, in which case the time is reset.
 					if(input.length === 0 && oldtext.length > 0) {
 						state = 0;
-						$("timer").innerHTML = "Reset";
+						html("timer", "Reset");
 					}
 					
 					if(oldtext.length < input.length && input.slice(-1) === "\t");
@@ -93,30 +129,37 @@
 					if(input.length >= oldtext.length + 4) {
 						// If text has been pasted, end the game and write "Pasting is not allowed."
 						state = 3;
-						$("output").innerHTML = input = "Pasting is not allowed.";
-						endGame();
+						html("output", input = "Pasting is not allowed.");
+						endCursor();
+						showMenu();
 					} else {
 						// Otherwise, update the output and reset the cursor.
-						$("output").innerHTML = input + curtext;
+						html("output", input + curtext);
 						cursor = 0;
 					}
 					
 					// If the user has typed out the full string, finish the program.
 					if(input === string) {
 						state = 2;
-						endGame();
-						$("output").style.color = "green";
-						$("timer").style.color = "green";
-						time = new Date - date;
-						$("timer").innerHTML = tf(time);
+						endCursor();
+						showMenu();
+						color("output", "green");
+						color("timer", "green");
+						time += new Date - date;
+						html("timer", tf(time));
+						
+						// Retrieve the old best score.
 						var oldtime = localStorage.getItem("level" + level);
 						if(!oldtime) {
+							// If it's not been set, set it.
 							localStorage.setItem("level" + level, time);
 						} else if(time < oldtime) {
+							// If it's slower than the new one, update it.
 							localStorage.setItem("level" + level, time);
-							$("timer").innerHTML += " (old best: " + tf(oldtime) + ")";
+							html("timer", " (old best: " + tf(oldtime) + ")", true);
 						} else {
-							$("timer").innerHTML += " (best: " + tf(oldtime) + ")";
+							// If it's not slower, leave it alone.
+							html("timer", " (best: " + tf(oldtime) + ")", true);
 						}
 					}
 					oldtext = input;
@@ -124,8 +167,9 @@
 				
 				// Updates the timer every 43 ms after the game starts.
 				function tick(){
-					if(state === 0 || state === 2) return;
-					$("timer").innerHTML = tf(new Date - date);
+					// If the game hasn't started, has finished or is paused, stop updating.
+					if(state === 0 || state === 2 || state === 4) return;
+					html("timer", tf(time + (new Date - date)));
 					setTimeout(tick, 43);
 				}
 			}
@@ -179,12 +223,12 @@
 		<pre id="timer"></pre>
 		<div id="menu">
 			<p>
-				<span class="menu-item"><kbd>r</kbd> restart</span>
-				<span class="menu-item"><kbd>n</kbd> next level</span>
-				<span class="menu-item"><kbd>s</kbd> select level</span>
+				<span class="menu-item" id="mi-r"><kbd>r</kbd> restart</span>
+				<span class="menu-item" id="mi-n"><kbd>n</kbd> next level</span>
+				<span class="menu-item" id="mi-s"><kbd>s</kbd> select level</span>
 			</p>
 		</div>
-		<textarea id="input" onkeydown="(event.which||event.keyCode)===9?(state=3,endGame(),event.preventDefault()):setTimeout(update, 10);" autofocus></textarea>
+		<textarea id="input" onkeydown="(event.which||event.keyCode)===9?(event.preventDefault(),state===1?pause():state===4&&unpause()):setTimeout(update, 10);" autofocus></textarea>
 		
 		<script>
 			start(levels[level]);
