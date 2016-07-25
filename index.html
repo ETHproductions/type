@@ -45,7 +45,20 @@
 					"keyboard",
 					"UPPERCASE",
 					"10 letters",
-					"nomoreideas"
+					"qwertyuiop",
+					"1234567890",
+					"A question?",
+					"A statement.",
+					"An exclamation!",
+					"myemail@mywebsite.com",
+					"Pasting is not allowed.",
+					"abcdefghijklmnopqrstuvwxyz",
+					"ethproductions.github.io/type",
+					"123 Maple St, Anytown, USA 09876",
+					"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+					"Finally, a sentence that makes sense!",
+					"A quick brown fox jumps over the lazy dog.",
+					"This is currently the last level. Come back again later to type new things!"
 				];
 			
 			// Flashes the cursor. Runs every 10 ms, but changes state every 500.
@@ -66,7 +79,7 @@
 				$("cursor").style.borderRight = "";
 			}
 			
-			// Brings up the menu. If x is true, hides the "next level" option.
+			// Brings up the menu. If the argument is true, hides the "next level" option.
 			function showMenu(x){
 				$("menu").style.display = "block";
 				if(x) $("mi-n").style.display = "none";
@@ -102,7 +115,7 @@
 				// Resetting all important values of elements.
 				html("target", string);
 				html("output", curtext);
-				color("output", "red");
+				color("output", "blue");
 				html("timer", "0.000");
 				color("timer", "");
 				value("input", "");
@@ -120,10 +133,12 @@
 					if(state === 2 || state === 3 || state === 4) {
 						if(oldtext.length < input.length) {
 							var newchar = input.slice(-1).toLowerCase();
-							if(newchar === "r")
+							if(newchar === "r") {
 								start(levels[level]);
-							else if(newchar === "n" && state !== 4)
+							} else if(newchar === "n" && state !== 4 && localStorage.getItem("level" + level) !== null) {
 								start(levels[++level] || levels[level = 0]);
+								html("level", "level " + (level + 1) + "/" + levels.length);
+							}
 						}
 						return;
 					}
@@ -143,11 +158,13 @@
 						// If text has been pasted, end the game and write "Pasting is not allowed."
 						state = 3;
 						html("output", input = "Pasting is not allowed.");
+						color("output", "red");
 						endCursor();
-						showMenu();
+						showMenu(localStorage.getItem("level" + level) === null);
 					} else {
 						// Otherwise, update the output and reset the cursor.
 						html("output", input + curtext);
+						color("output", input === string.slice(0, input.length) ? "blue" : "red");
 						cursor = 0;
 					}
 					
@@ -191,6 +208,7 @@
 			* {
 				font-family: 'Open Sans', sans-serif;
 			}
+			
 			pre {
 				font-size: 28px;
 				font-family: 'Source Code Pro', monospace;
@@ -228,6 +246,12 @@
 			.menu-item {
 				margin-right: 12px;
 			}
+			
+			#level {
+				position: absolute; 
+				bottom: 0;
+				left: 8;
+			}
 		</style>
 	</head>
 	<body>
@@ -241,9 +265,11 @@
 				<span class="menu-item" id="mi-s"><kbd>s</kbd> select level</span>
 			</p>
 		</div>
+		<p id="level"></p>
 		<textarea id="input" onkeydown="keyDown(event);" autofocus></textarea>
 		
 		<script>
+			html("level", "level " + (level + 1) + "/" + levels.length);
 			start(levels[level]);
 		</script>
 	</body>
