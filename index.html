@@ -43,7 +43,8 @@
 				cursorText = '<span id="cursor" style="border-right: 2px solid black; margin-right: -2px;"></span>', // An element representing the cursor.
 				cursor = 0, // Keeps track of which state the cursor should be in (on/off).
 				state = PRESTART,
-				level = 0, // The current level the player is on. Represents an item in the below list.
+				currLevel = 0, // The current level the player is on. Represents an item in the below list.
+				bestLevel = localStorage.getItem("bestlevel") || 0,
 				levels = [
 					"type",
 					"hello",
@@ -88,20 +89,25 @@
 			}
 			
 			// Brings up the menu. If the argument is true, hides the "next level" option.
-			function showMenu(x) {
+			function showMenu(buttons = {}) {
 				$("menu").style.display = "block";
-				if(x) $("mi-n").style.display = "none";
+				for (var x in buttons) {
+					if (buttons[x] === false)
+						$("mi-" + x).style.display = "none";
+				}
 			}
 			
 			// Hides the menu.
 			function hideMenu() {
 				$("mi-n").style.display = "inline";
+				$("mi-tab").style.display = "inline";
 				$("menu").style.display = "none";
 			}
 			
 			// Kicks off a new game.
-			function start(string) {
-				var date = 0,
+			function start(level) {
+				var string = levels[level],
+					date = 0,
 					time = 0,
 					oldtext = "";
 				
@@ -109,7 +115,8 @@
 					time += new Date - date;
 					state = PAUSED;
 					endCursor();
-					showMenu(true);
+					html("timer", tf(time));
+					showMenu({ n: bestLevel > currLevel });
 				}
 			
 				unpause = function unpause() {
@@ -142,11 +149,14 @@
 					if (state === FINISHED || state === DISABLED || state === PAUSED) {
 						if (oldtext.length < input.length) {
 							var newchar = input.slice(-1).toLowerCase();
+							value("input", input.slice(0, -1));
 							if (newchar === "r") {
-								start(levels[level]);
-							} else if (newchar === "n" && state !== PAUSED && localStorage.getItem("level" + level) !== null) {
-								start(levels[++level] || levels[level = 0]);
-								html("level", "level " + (level + 1) + "/" + levels.length);
+								start(currLevel);
+							} else if (newchar === "n" && state !== PAUSED && bestLevel > currLevel) {
+								if (++currLevel >= levels.length)
+									currLevel = 0;
+								start(currLevel);
+								html("level", "level " + (currLevel + 1) + "/" + levels.length);
 							}
 						}
 						return;
@@ -169,7 +179,7 @@
 						html("output", input = "Pasting is not allowed.");
 						color("output", "red");
 						endCursor();
-						showMenu(localStorage.getItem("level" + level) === null);
+						showMenu({ n: bestLevel > currLevel, tab: false } );
 					} else {
 						// Otherwise, update the output and reset the cursor.
 						html("output", input.slice(0, cursorPos) + cursorText + input.slice(cursorPos));
@@ -181,20 +191,24 @@
 					if (input === string) {
 						state = FINISHED;
 						endCursor();
-						showMenu();
+						showMenu({ tab: false });
 						color("output", "green");
 						color("timer", "green");
 						time += new Date - date;
 						html("timer", tf(time));
+						if (currLevel >= bestLevel) {
+							localStorage.setItem("bestlevel", ++bestLevel);
+							$("level").innerHTML += " New level unlocked!";
+						}
 						
 						// Retrieve the old best score.
-						var oldtime = localStorage.getItem("level" + level);
+						var oldtime = localStorage.getItem("level" + currLevel);
 						if (!oldtime) {
 							// If it's not been set, set it.
-							localStorage.setItem("level" + level, time);
+							localStorage.setItem("level" + currLevel, time);
 						} else if (time < oldtime) {
 							// If it's slower than the new one, update it.
-							localStorage.setItem("level" + level, time);
+							localStorage.setItem("level" + currLevel, time);
 							html("timer", " (old best: " + tf(oldtime) + ")", true);
 						} else {
 							// If it's not slower, leave it alone.
@@ -207,7 +221,7 @@
 				// Updates the timer every 43 ms after the game starts.
 				function tick() {
 					// If the game hasn't started, has finished, or is paused, stop updating.
-					if(state === PRESTART || state === FINISHED || state === PAUSED) return;
+					if (state === PRESTART || state === FINISHED || state === PAUSED) return;
 					html("timer", tf(time + (new Date - date)));
 					setTimeout(tick, 43);
 				}
@@ -272,14 +286,15 @@
 				<span class="menu-item" id="mi-r"><kbd>r</kbd> restart</span>
 				<span class="menu-item" id="mi-n"><kbd>n</kbd> next level</span>
 				<span class="menu-item" id="mi-s"><kbd>s</kbd> select level</span>
+				<span class="menu-item" id="mi-tab"><kbd>Tab</kbd> continue</span>
 			</p>
 		</div>
 		<p id="level"></p>
 		<textarea id="input" onkeydown="keyDown(event);" autofocus></textarea>
 		
 		<script>
-			html("level", "level " + (level + 1) + "/" + levels.length);
-			start(levels[level]);
+			html("level", "level " + (currLevel + 1) + "/" + levels.length);
+			start(currLevel);
 		</script>
 	</body>
 </html>
