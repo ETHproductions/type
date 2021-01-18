@@ -152,7 +152,7 @@
 							value("input", input.slice(0, -1));
 							if (newchar === "r") {
 								start(currLevel);
-							} else if (newchar === "n" && state !== PAUSED && bestLevel > currLevel) {
+							} else if ((newchar === "n" || newchar === "\n") && state !== PAUSED && bestLevel > currLevel) {
 								if (++currLevel >= levels.length)
 									currLevel = 0;
 								start(currLevel);
